@@ -5,14 +5,6 @@ import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
 import { AUTH_API } from "../config/api";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/solid";
-import jwt_decode from "jwt-decode";
-
-interface DecodedToken {
-  sub: string;
-  role: string;
-  iat: number;
-  exp: number;
-}
 
 export default function Login() {
   const navigate = useNavigate();
@@ -33,29 +25,24 @@ export default function Login() {
       const res = await axios.post(AUTH_API.LOGIN, form);
 
       const token = res.data.accessToken;
-      if (!token) throw new Error("No token received");
+      const role = res.data.role;
 
-      // Decode JWT to get role
-      const decoded: DecodedToken = jwt_decode(token);
+      if (!token || !role)
+        throw new Error("Invalid login response from server");
 
-      // ✅ Store token and role in localStorage
+      // Store in localStorage
       localStorage.setItem("accessToken", token);
-      localStorage.setItem("userRole", decoded.role);
+      localStorage.setItem("userRole", role);
 
-      console.log("Token stored:", localStorage.getItem("accessToken"));
-      console.log("Role stored:", localStorage.getItem("userRole"));
+      // ✅ Success toast
+      toast.success("Welcome back! Login successful 🚀", { duration: 2500 });
 
-      // ✅ Show success toast
-      toast.success("Welcome back! Login successful 🚀");
-
-      // Redirect based on role
-      if (decoded.role === "trainee") {
-        navigate("/trainee/dashboard");
-      } else if (decoded.role === "trainer") {
-        navigate("/trainer/dashboard");
-      } else {
-        navigate("/");
-      }
+      // Redirect based on role after a short delay
+      setTimeout(() => {
+        if (role === "trainee") navigate("/trainee/dashboard");
+        else if (role === "trainer") navigate("/trainer/dashboard");
+        else navigate("/");
+      }, 500); // 500ms delay to let toast render
     } catch (err: any) {
       const status = err.response?.status;
       const message = err.response?.data?.message;
@@ -77,19 +64,21 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[url('/assets/razor.jpeg')] bg-cover bg-center px-4 relative">
-      {/* Global overlay */}
+    <div className="min-h-screen flex items-center justify-center bg-[url('/assets/razor.jpeg')] bg-cover bg-center relative px-4">
+      {/* Overlay for readability */}
       <div className="absolute inset-0 bg-black/50 pointer-events-none"></div>
 
       {/* Toast container */}
       <Toaster position="top-right" reverseOrder={false} />
 
-      <div className="relative z-10 bg-gray-900/70 backdrop-blur-xl rounded-2xl p-10 max-w-md w-full shadow-2xl text-white">
-        <h2 className="text-3xl font-playfair font-bold text-center mb-6">
+      {/* Login Card */}
+      <div className="relative z-10 bg-gray-900/70 backdrop-blur-xl rounded-3xl p-10 max-w-md w-full shadow-2xl text-white">
+        <h2 className="text-3xl font-playfair font-bold text-center mb-6 animate-fade-in">
           Welcome Back
         </h2>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Email */}
           <input
             type="email"
             name="email"
@@ -97,9 +86,10 @@ export default function Login() {
             value={form.email}
             onChange={handleChange}
             required
-            className="w-full px-4 py-3 rounded-lg bg-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 outline-none transition"
+            className="w-full px-4 py-3 rounded-xl bg-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 outline-none transition"
           />
 
+          {/* Password with show/hide */}
           <div className="relative">
             <input
               type={showPassword ? "text" : "password"}
@@ -108,7 +98,8 @@ export default function Login() {
               value={form.password}
               onChange={handleChange}
               required
-              className="w-full px-4 py-3 rounded-lg bg-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 outline-none transition"
+              minLength={6}
+              className="w-full px-4 py-3 rounded-xl bg-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 outline-none transition"
             />
             <div
               className="absolute right-3 top-3 cursor-pointer text-gray-400 hover:text-white"
@@ -122,15 +113,17 @@ export default function Login() {
             </div>
           </div>
 
+          {/* Login Button */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 rounded-full font-semibold transition transform hover:-translate-y-0.5 disabled:opacity-50"
+            className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 rounded-full font-semibold shadow-lg transition transform hover:-translate-y-0.5 disabled:opacity-50"
           >
             {loading ? "Logging in..." : "Login"}
           </button>
         </form>
 
+        {/* Register Link */}
         <p className="mt-6 text-center text-gray-400">
           Not registered yet?{" "}
           <span
