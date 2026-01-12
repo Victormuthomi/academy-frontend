@@ -3,6 +3,7 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import { AUTH_API } from "../config/api";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/solid";
+import React, { useState } from "react";
 
 export default function Register() {
   const navigate = useNavigate();

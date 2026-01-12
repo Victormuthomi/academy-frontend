@@ -1,6 +1,5 @@
 // src/config/api.ts
 
-const LOCAL_BASE = "http://localhost:5000"; // Your local backend
 const PROD_BASE = "https://alcodist-backend.vercel.app"; // Production backend
 
 // Use Vite environment variable to switch automatically

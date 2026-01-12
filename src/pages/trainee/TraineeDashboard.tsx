@@ -1,4 +1,5 @@
-// src/pages/TraineeDashboard.tsx
+// src/pages/trainee/TraineeDashboard.tsx
+import { useState, useEffect } from "react";
 import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
 import {
@@ -18,12 +19,17 @@ import {
 } from "@heroicons/react/24/solid";
 import { TRAINEE_API } from "../../config/api";
 
+interface JournalComment {
+  _id: string;
+  comment: string;
+}
+
 interface Journal {
   _id: string;
   title: string;
   description: string;
   githubLink: string;
-  comments: { _id: string; comment: string }[];
+  comments: JournalComment[];
   date: string;
 }
 
@@ -48,30 +54,37 @@ export default function TraineeDashboard() {
     githubLink: "",
     date: new Date().toISOString().split("T")[0],
   });
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [activeTab, setActiveTab] = useState<
+    "dashboard" | "journals" | "profile" | "editProfile"
+  >("dashboard");
   const [editProfileData, setEditProfileData] = useState({
     institution: "",
     skills: "",
     projects: "",
   });
+
   const token = localStorage.getItem("accessToken");
 
   // Fetch dashboard data
   const fetchDashboard = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(TRAINEE_API.DASHBOARD, {
+      const res = await axios.get<{
+        trainee: Profile;
+        journalSummary: { journals: Journal[] };
+      }>(TRAINEE_API.DASHBOARD, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
       setProfile(res.data.trainee);
       setEditProfileData({
         institution: res.data.trainee.institution || "",
         skills: (res.data.trainee.skills || []).join(", "),
         projects: (res.data.trainee.projects || []).join(", "),
       });
+
       const sortedJournals = res.data.journalSummary.journals.sort(
-        (a: Journal, b: Journal) =>
-          new Date(b.date).getTime() - new Date(a.date).getTime(),
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
       );
       setJournals(sortedJournals);
     } catch {
@@ -93,11 +106,7 @@ export default function TraineeDashboard() {
 
   // Journal submit
   const handleJournalSubmit = async () => {
-    if (
-      !newJournal.title ||
-      !newJournal.description ||
-      !newJournal.githubLink
-    ) {
+    if (!newJournal.title || !newJournal.description || !newJournal.githubLink) {
       toast.error("All fields including GitHub link are required");
       return;
     }
@@ -108,7 +117,7 @@ export default function TraineeDashboard() {
       return;
     }
     try {
-      const res = await axios.post(TRAINEE_API.ADD_JOURNAL, newJournal, {
+      const res = await axios.post<Journal>(TRAINEE_API.ADD_JOURNAL, newJournal, {
         headers: { Authorization: `Bearer ${token}` },
       });
       toast.success("Journal added!");
@@ -150,6 +159,7 @@ export default function TraineeDashboard() {
     { name: "Skills", value: profile?.skills.length || 0 },
     { name: "Projects", value: profile?.projects.length || 0 },
   ];
+
   const COLORS = ["#34d399", "#6366f1", "#facc15"];
 
   return (
@@ -225,14 +235,14 @@ export default function TraineeDashboard() {
                 </p>
                 <p>
                   Projects:{" "}
-                  <span className="font-semibold">
-                    {profile.projects.length}
-                  </span>
+                  <span className="font-semibold">{profile.projects.length}</span>
                 </p>
                 <p>
                   Active:{" "}
                   <span
-                    className={`px-2 py-1 rounded-full text-xs ${profile.isActive ? "bg-green-500/50" : "bg-yellow-400/50"}`}
+                    className={`px-2 py-1 rounded-full text-xs ${
+                      profile.isActive ? "bg-green-500/50" : "bg-yellow-400/50"
+                    }`}
                   >
                     {profile.isActive ? "Yes" : "No"}
                   </span>
@@ -247,9 +257,9 @@ export default function TraineeDashboard() {
                       dataKey="value"
                       nameKey="name"
                       outerRadius={80}
-                      label={(entry) => `${entry.name}: ${entry.value}`}
+                      label={({ name, value }) => `${name}: ${value}`}
                     >
-                      {pieData.map((entry, index) => (
+                      {pieData.map((_, index) => (
                         <Cell
                           key={`cell-${index}`}
                           fill={COLORS[index % COLORS.length]}
@@ -293,10 +303,7 @@ export default function TraineeDashboard() {
                   placeholder="Description"
                   value={newJournal.description}
                   onChange={(e) =>
-                    setNewJournal({
-                      ...newJournal,
-                      description: e.target.value,
-                    })
+                    setNewJournal({ ...newJournal, description: e.target.value })
                   }
                   className="p-3 rounded-lg bg-gray-700 text-white col-span-1 md:col-span-2 focus:outline-none"
                   rows={4}
@@ -322,10 +329,8 @@ export default function TraineeDashboard() {
             <div className="bg-gray-800/50 p-6 rounded-2xl shadow hover:shadow-lg transition">
               <h3 className="text-xl font-bold mb-4">Latest Journals</h3>
               {loading && <p>Loading journals...</p>}
-              {!loading && journals.length === 0 && (
-                <p>No journals submitted yet.</p>
-              )}
-              {journals.map((j) => (
+              {!loading && journals.length === 0 && <p>No journals submitted yet.</p>}
+              {journals.map((j: Journal) => (
                 <div
                   key={j._id}
                   className="bg-gray-700/40 p-4 rounded-2xl mb-4 hover:shadow-lg transition"
@@ -345,7 +350,7 @@ export default function TraineeDashboard() {
                     GitHub Link
                   </a>
                   <div className="flex flex-wrap mt-2 gap-2">
-                    {j.comments.map((c) => (
+                    {j.comments.map((c: JournalComment) => (
                       <span
                         key={c._id}
                         className="bg-gray-600 px-2 py-1 rounded-full text-xs"
@@ -406,10 +411,7 @@ export default function TraineeDashboard() {
                 placeholder="Institution"
                 value={editProfileData.institution}
                 onChange={(e) =>
-                  setEditProfileData({
-                    ...editProfileData,
-                    institution: e.target.value,
-                  })
+                  setEditProfileData({ ...editProfileData, institution: e.target.value })
                 }
                 className="p-3 rounded-lg bg-gray-700 text-white focus:outline-none"
               />
@@ -418,10 +420,7 @@ export default function TraineeDashboard() {
                 placeholder="Skills (comma separated)"
                 value={editProfileData.skills}
                 onChange={(e) =>
-                  setEditProfileData({
-                    ...editProfileData,
-                    skills: e.target.value,
-                  })
+                  setEditProfileData({ ...editProfileData, skills: e.target.value })
                 }
                 className="p-3 rounded-lg bg-gray-700 text-white focus:outline-none"
               />
@@ -430,10 +429,7 @@ export default function TraineeDashboard() {
                 placeholder="Projects (comma separated)"
                 value={editProfileData.projects}
                 onChange={(e) =>
-                  setEditProfileData({
-                    ...editProfileData,
-                    projects: e.target.value,
-                  })
+                  setEditProfileData({ ...editProfileData, projects: e.target.value })
                 }
                 className="p-3 rounded-lg bg-gray-700 text-white focus:outline-none"
               />
@@ -450,3 +446,4 @@ export default function TraineeDashboard() {
     </div>
   );
 }
+

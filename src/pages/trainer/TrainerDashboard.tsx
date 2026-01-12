@@ -1,4 +1,5 @@
-// src/pages/TrainerDashboard.tsx
+// src/pages/trainer/TrainerDashboard.tsx
+import { useState, useEffect } from "react";
 import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
 import {
@@ -42,7 +43,14 @@ interface Journal {
   comments: JournalComment[];
   date: string;
   createdAt: string;
-  trainee?: Trainee; // in case API returns author info
+  trainee?: Trainee;
+}
+
+// Pie chart data type compatible with Recharts
+interface PieData {
+  [key: string]: any; // required for Recharts
+  name: string;
+  value: number;
 }
 
 export default function TrainerDashboard() {
@@ -50,15 +58,17 @@ export default function TrainerDashboard() {
   const [selectedTrainee, setSelectedTrainee] = useState<Trainee | null>(null);
   const [journals, setJournals] = useState<Journal[]>([]);
   const [loadingJournals, setLoadingJournals] = useState(false);
-  const [commentMap, setCommentMap] = useState<{ [key: string]: string }>({});
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [commentMap, setCommentMap] = useState<Record<string, string>>({});
+  const [activeTab, setActiveTab] = useState<"dashboard" | "trainees">(
+    "dashboard",
+  );
   const [showJournalModal, setShowJournalModal] = useState(false);
 
   const token = localStorage.getItem("accessToken");
 
   const fetchTrainees = async () => {
     try {
-      const res = await axios.get(TRAINER_API.TRAINEES, {
+      const res = await axios.get<Trainee[]>(TRAINER_API.TRAINEES, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setTrainees(res.data);
@@ -70,13 +80,14 @@ export default function TrainerDashboard() {
   const fetchJournals = async (traineeId: string) => {
     setLoadingJournals(true);
     try {
-      const res = await axios.get(TRAINER_API.GET_JOURNALS(traineeId), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      // Sort journals newest first
+      const res = await axios.get<Journal[]>(
+        TRAINER_API.GET_JOURNALS(traineeId),
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
       const sorted = res.data.sort(
-        (a: Journal, b: Journal) =>
-          new Date(b.date).getTime() - new Date(a.date).getTime(),
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
       );
       setJournals(sorted);
     } catch {
@@ -107,13 +118,13 @@ export default function TrainerDashboard() {
     const text = commentMap[journalId];
     if (!text) return;
     try {
-      const res = await axios.post(
+      const res = await axios.post<{ comments: JournalComment[] }>(
         TRAINER_API.ADD_COMMENT(journalId),
         { comment: text },
         { headers: { Authorization: `Bearer ${token}` } },
       );
-      setJournals((prev) =>
-        prev.map((j) =>
+      setJournals((prev: Journal[]) =>
+        prev.map((j: Journal) =>
           j._id === journalId ? { ...j, comments: res.data.comments } : j,
         ),
       );
@@ -146,22 +157,18 @@ export default function TrainerDashboard() {
   const pendingTrainees = totalTrainees - activeTrainees;
   const totalJournals = journals.length;
 
-  const pieData = [
+  const pieData: PieData[] = [
     { name: "Active", value: activeTrainees },
     { name: "Pending", value: pendingTrainees },
   ];
+
   const COLORS = ["#34d399", "#facc15"];
 
-  // Latest pending trainees (limit 5)
-  const latestPending = trainees.filter((t) => !t.isActive).slice(0, 5);
-
-  // Latest trainees (limit 5)
   const latestTrainees = trainees.slice(0, 5);
 
   return (
     <div className="flex min-h-screen bg-gray-900 text-white">
       <Toaster position="top-right" />
-
       {/* Sidebar */}
       <aside className="w-64 bg-gray-800/90 p-6 flex flex-col space-y-6">
         <h1 className="text-2xl font-bold">Alcodist Academy</h1>
@@ -175,7 +182,6 @@ export default function TrainerDashboard() {
             <UsersIcon className="w-5 h-5 mr-2" />
             Dashboard
           </button>
-
           <button
             onClick={() => setActiveTab("trainees")}
             className={`w-full flex items-center p-2 rounded-lg hover:bg-indigo-600/50 transition ${
@@ -185,9 +191,8 @@ export default function TrainerDashboard() {
             <UserGroupIcon className="w-5 h-5 mr-2" />
             Trainees
           </button>
-
           <button
-            onClick={() => handleLogout()}
+            onClick={handleLogout}
             className="w-full flex items-center p-2 rounded-lg hover:bg-red-600/50 transition"
           >
             <ArrowLeftOnRectangleIcon className="w-5 h-5 mr-2" />
@@ -196,9 +201,8 @@ export default function TrainerDashboard() {
         </nav>
       </aside>
 
-      {/* Main Content */}
+      {/* Main */}
       <main className="flex-1 p-6 overflow-y-auto space-y-8">
-        {/* Dashboard */}
         {activeTab === "dashboard" && (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -229,9 +233,9 @@ export default function TrainerDashboard() {
                     dataKey="value"
                     nameKey="name"
                     outerRadius={80}
-                    label={(entry) => `${entry.name}: ${entry.value}`}
+                    label={({ name, value }) => `${name}: ${value}`}
                   >
-                    {pieData.map((entry, index) => (
+                    {pieData.map((_, index) => (
                       <Cell
                         key={`cell-${index}`}
                         fill={COLORS[index % COLORS.length]}
@@ -243,48 +247,12 @@ export default function TrainerDashboard() {
                 </PieChart>
               </ResponsiveContainer>
             </div>
-
-            {/* Latest Pending Trainees */}
-            {latestPending.length > 0 && (
-              <div>
-                <h3 className="text-xl font-bold mb-4">Pending Trainees</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {latestPending.map((t) => (
-                    <div
-                      key={t._id}
-                      className="bg-gray-800/50 p-5 rounded-2xl hover:scale-105 transform transition"
-                    >
-                      <h3 className="text-lg font-bold">{t.name}</h3>
-                      <p className="text-gray-300 text-sm">{t.email}</p>
-                      <p className="text-gray-300 text-sm">
-                        {t.institution || ""}
-                      </p>
-                      <div className="mt-3 flex space-x-2">
-                        <button
-                          onClick={() => handleActivate(t._id)}
-                          className="flex-1 bg-indigo-600 py-1 rounded hover:bg-indigo-700 transition"
-                        >
-                          Activate
-                        </button>
-                        <button
-                          onClick={() => openJournalsModal(t)}
-                          className="flex-1 bg-gray-700 py-1 rounded hover:bg-gray-600 transition"
-                        >
-                          View Journals
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </>
         )}
 
-        {/* Trainees Tab */}
         {activeTab === "trainees" && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {latestTrainees.map((t) => (
+            {latestTrainees.map((t: Trainee) => (
               <div
                 key={t._id}
                 className="bg-gray-800/50 p-5 rounded-2xl hover:scale-105 transform transition"
@@ -302,7 +270,6 @@ export default function TrainerDashboard() {
                     {t.isActive ? "Active" : "Pending"}
                   </span>
                 </p>
-
                 <div className="mt-3 flex space-x-2">
                   {!t.isActive && (
                     <button
@@ -341,7 +308,7 @@ export default function TrainerDashboard() {
               {!loadingJournals && journals.length === 0 && (
                 <p>No journals found.</p>
               )}
-              {journals.map((j) => (
+              {journals.map((j: Journal) => (
                 <div
                   key={j._id}
                   className="bg-gray-800/50 p-4 rounded-2xl hover:scale-105 transform transition mb-4"
@@ -361,7 +328,7 @@ export default function TrainerDashboard() {
                     </a>
                   )}
                   <div className="flex flex-wrap mt-2 gap-2">
-                    {j.comments.map((c) => (
+                    {j.comments.map((c: JournalComment) => (
                       <span
                         key={c._id}
                         className="bg-gray-700/40 px-2 py-1 rounded-full text-xs"
