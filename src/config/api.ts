@@ -1,6 +1,6 @@
 // src/config/api.ts
 
-const PROD_BASE = "https://academy-backend-0wdf.onrender.com/"; // Production backend
+const PROD_BASE = "https://academy-backend-0wdf.onrender.com"; // Production backend
 
 // Use Vite environment variable to switch automatically
 const BASE_URL = import.meta.env.VITE_API_BASE || PROD_BASE;
