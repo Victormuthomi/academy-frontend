@@ -1,4 +1,3 @@
-import React, { useState } from "react";
 import HeroSection from "../components/HeroSection";
 import MottoSection from "../components/MottoVisionSection";
 import CultureSection from "../components/CultureSection";
@@ -6,8 +5,6 @@ import WhyJoinSection from "../components/WhyJoinSection";
 import HowToJoinSection from "../components/HowToJoinSection";
 
 export default function LandingPage() {
-  const [menuOpen, setMenuOpen] = useState(false);
-
   return (
     <div className="relative">
       {/* Hero */}

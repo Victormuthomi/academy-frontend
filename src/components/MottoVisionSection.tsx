@@ -1,5 +1,4 @@
 // src/components/MottoVisionSection.tsx
-import React from "react";
 import visionImg from "../assets/expert.jpg"; // replace with your horizontal image
 
 export default function MottoSection() {

@@ -1,5 +1,4 @@
 // src/components/Footer.tsx
-import React from "react";
 import { FaGithub, FaLinkedin, FaTwitter, FaGlobe } from "react-icons/fa";
 
 export default function Footer() {

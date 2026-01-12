@@ -1,5 +1,4 @@
 // src/components/CultureSection.tsx
-import React from "react";
 import {
   LightBulbIcon,
   CogIcon,

@@ -1,5 +1,4 @@
 // src/components/HeroSection.tsx
-import React from "react";
 import { Link } from "react-router-dom";
 import heroIllustration from "../assets/workstation.jpg"; // Horizontal illustration
 

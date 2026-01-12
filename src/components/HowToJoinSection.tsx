@@ -1,5 +1,4 @@
 // src/components/HowToJoinSection.tsx
-import React from "react";
 import {
   UserPlusIcon,
   DocumentTextIcon,

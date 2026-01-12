@@ -1,5 +1,4 @@
 // src/components/WhyJoinSection.tsx
-import React from "react";
 import whyImg from "../assets/cyber.jpg"; // high-quality illustration
 
 const points = [
